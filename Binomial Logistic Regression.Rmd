@@ -1,0 +1,131 @@
+---
+title: "Project_BinomialLogisticRegression"
+author: "Nick Weber"
+date: "4/9/2018"
+output: html_document
+---
+
+```{r}
+library(car)
+library(dplyr)
+library(ggplot2)
+library(ggfortify)
+library(vegan)
+
+#Reading in dataset.
+blacktip_raw <- read.csv(file="Blacktip_Datasheet_Quant.csv", na.strings=c("", " ", "NA"))
+
+#Just ensuring that R realizes these variables are categorical and not continuous...
+blacktip_raw$Mortality <- factor(blacktip_raw$Mortality)
+blacktip_raw$Condition <- factor(blacktip_raw$Condition)
+blacktip_raw$Sex <- factor(blacktip_raw$Sex)
+blacktip_raw$Hook.Location <- factor(blacktip_raw$Hook.Location)
+```
+
+```{r}
+#Cleaning dataset: Removing 2 rows (1 shark without i-STAT blood data and 1 shark with no known mortality outcome because tags were removed before release)...
+blacktip_cleaned <- blacktip_raw[-c(5,6), ]
+blacktip_cleaned$Mortality <- factor(blacktip_cleaned$Mortality)
+
+#Selecting which variables I want to include in PCA...
+columns_for_pca <- c("Fight.Time..min.", "pH", "Lactate..mmol.L.", "Handling.Time..min.", "Fork.Length..cm.", "Water.Temp...C.")
+pca_dataframe <- data.frame(blacktip_cleaned[ , columns_for_pca])
+pca_dataframe_naomitted <- na.omit(pca_dataframe)
+
+#Conducting PCA in ggplot, and scaling all continuous variables. 
+autoplot(prcomp(scale(pca_dataframe_naomitted)), shape=FALSE, label.size=3, loadings=TRUE, loadings.label=TRUE, loadings.label.size=3, loadings.colour='black', loadings.label.colour='black', data=blacktip_cleaned, colour='Mortality')
+
+#This PCA is telling me to choose either 'pH' or 'Lactate', and either 'Handling Time' or 'Fork Length' for regression purposes. This makes sense because 'pH' and 'Lactate' are negatively correlated (as they should be) and 'Handling Time' and 'Fork Length' (and really 'Fight Time') are positively correlated, which makes sense (i.e. larger sharks are both on the line and handled for longer period of time). So based on the results of this PCA, I can get rid of 2 of 6 variables for the regression, and I am choosing to get rid of 'Lactate' and 'Fork Length'...
+```
+
+```{r}
+#Predicting mortality for all sharks combined (i.e. combining sharks caught from shore and sharks caught from charter boats), with 3 mortalities and 29 survivors.
+
+#Model 1: Mortality ~ Environment
+#Model 2: Mortality ~ Environment + Fishing Method
+#Model 3: Mortality ~ Environment * Fishing Method (looking at interaction)
+
+#Simply visualizing relationships between potential explanatory variables.
+pairs(Mortality ~ Fight.Time..min. + Handling.Time..min. + Hook.Location + Fork.Length..cm. + Condition + pH + Lactate..mmol.L. + Water.Temp...C., data=blacktip_raw, na.action=na.omit, panel=panel.smooth)
+
+#From this plot, we can see that 'pH' and 'Lactate' are negatively correlated, and 'Fork Length' is relatively positively correlated with both 'Fight Time' and 'Handling Time' (consistent with the results of the PCA above). 
+```
+
+```{r}
+#Starting with the full possible model, using the variables selected for above, via PCA. However, I am also including the variable 'Condition' here, which is categorical and thus could not be included in the PCA.
+mod.1 <- glm(Mortality ~ Fight.Time..min. + Handling.Time..min. + Condition + pH + Water.Temp...C., family="binomial", data=blacktip_cleaned) #"Logit" is the default model when family is "binomial".
+
+summary(mod.1)
+Anova(mod.1, type=3) #AIC=28.634
+
+#Now taking a backwards stepwise approach to get the best fitting model (i.e. removing the least significant variable at each step)...
+mod.1.1 <- glm(Mortality ~ Handling.Time..min. + Condition + pH + Water.Temp...C., family="binomial", data=blacktip_cleaned)
+
+summary(mod.1.1)
+Anova(mod.1.1, type=3) #AIC=26.900
+
+mod.1.2 <- glm(Mortality ~ Handling.Time..min. + Condition + pH, family="binomial", data=blacktip_cleaned)
+
+summary(mod.1.2)
+Anova(mod.1.2, type=3) #AIC=25.491
+
+mod.1.3 <- glm(Mortality ~ Handling.Time..min. + pH, family="binomial", data=blacktip_cleaned)
+
+summary(mod.1.3)
+Anova(mod.1.3, type=3) #AIC=22.323
+
+mod.1.4 <- glm(Mortality ~ pH, family="binomial", data=blacktip_cleaned)
+
+summary(mod.1.4)
+Anova(mod.1.4, type=3) #AIC=20.360 and p=0.05948
+
+#The above model (mod.1.4), with only pH as an explanatory variable, is the best fitting model based on AIC scores.
+```
+
+```{r}
+#Moving on to Model 2, which involves taking 'Fishing Method' into account (i.e. determining if shore-based vs. charter-based affects mortality).
+
+#Taking same backwards stepwise approach as above (i.e. starting with full possible model and removing the least significant variable at each step)... Again, only real difference between this model and the model above is that I am now taking 'Fishing Method' into account.
+mod.2 <- glm(Mortality ~ Fight.Time..min. + Handling.Time..min. + Condition + pH + Water.Temp...C. + Fishing.Method, family="binomial", data=blacktip_cleaned) 
+
+summary(mod.2)
+Anova(mod.2, type=3) #AIC=18.000
+
+mod.2.1 <- glm(Mortality ~ Fight.Time..min. + Handling.Time..min. + Condition + pH + Fishing.Method, family="binomial", data=blacktip_cleaned)
+
+summary(mod.2.1)
+Anova(mod.2.1, type=3) #AIC=27.884
+
+mod.2.2 <- glm(Mortality ~ Handling.Time..min. + Condition + pH + Fishing.Method, family="binomial", data=blacktip_cleaned)
+
+summary(mod.2.2)
+Anova(mod.2.2, type=3) #AIC=26.166
+
+mod.2.3 <- glm(Mortality ~ Handling.Time..min. + Condition + pH, family="binomial", data=blacktip_cleaned)
+
+summary(mod.2.3)
+Anova(mod.2.3, type=3) #AIC=25.491
+
+mod.2.4 <- glm(Mortality ~ Handling.Time..min. + pH, family="binomial", data=blacktip_cleaned)
+
+summary(mod.2.4)
+Anova(mod.2.4, type=3) #AIC=22.323
+
+mod.2.5 <- glm(Mortality ~ pH, family="binomial", data=blacktip_cleaned)
+
+summary(mod.2.5)
+Anova(mod.2.5, type=3) #AIC=20.360 and p=0.05948
+
+#As above, the above model (mod.2.5), with only pH as an explanatory variable, is the best fitting model based on AIC scores. The full model (mod.2) actually has a lower AIC score (18.000), but because this model has so many explanatory variables, I believe the final model (mod.2.5) with only pH as an explanatory variable is more informative and biologically meaningful. 
+```
+
+```{r}
+#Now moving on to Model 3 and taking into account the potential interaction between 'Fishing Method' and 'pH'.
+
+mod.3 <- glm(Mortality ~ pH * Fishing.Method, family="binomial", data=blacktip_cleaned) 
+
+summary(mod.3)
+Anova(mod.3, type=3) #AIC=23.456
+
+#There is no significant interaction between 'Fishing Method' and 'pH'. 
+```
