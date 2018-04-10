@@ -12,4 +12,4 @@ post-release.
 #The objective of this project is to conduct a binomial logistic regression, to determine if we can predict for the outcome 
 of a released shark (i.e. whether the shark survives or dies) using the variables measured (and described above). 
 
-#The "Binomial Logistic Regression" markdown file will walk you through the analysis step-by-step, with written code (denoted with a #) throughout. 
+#The "Binomial Logistic Regression" markdown file will walk you through the analysis step-by-step, with written code (denoted with a #) throughout. Because of the large number of variables measured (all of which could influence, and thus be used to predict, post-release mortality), I begin with a PCA - to shed some light on the variables explaining the majority of the variation in the dataset. 
