@@ -2,8 +2,16 @@
 title: "Project_BinomialLogisticRegression"
 author: "Nick Weber"
 date: "4/9/2018"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 ---
+
+```{r}
+#For my Master's thesis, I am studying the stress response and post-release mortality in blacktip sharks that are caught by recreational fishermen in 2 different fishing modes (shore-based vs. charter-based). I have sampled 32 blacktip sharks so far (including both shore-based and charter-based), and for each of those sharks I recorded the 'Fight Time' (i.e. time on the line), 'Handling Time' (i.e. time handled), and 'Fork Length' (i.e. length of the shark). I also drew blood from sharks to assess stress parameters ('pH' and 'Lactate' are included here). Upon the release of each shark, a 'Condition' (ranging from 1-5; 1 being showing no signs of stress and 5 being moribund) was assigned, based on the sharks behavior upon release. The 'Water Temperature' at each site was recorded. Finally, each shark was tagged, in order to monitor survivorship post-release. 
+
+#The objective of this project is to conduct a binomial logistic regression, to determine if we can predict for the outcome of a released shark (i.e. whether the shark survives or dies) using the variables measured (and described above). 
+```
 
 ```{r}
 library(car)
@@ -14,20 +22,16 @@ library(vegan)
 
 #Reading in dataset.
 blacktip_raw <- read.csv(file="Blacktip_Datasheet_Quant.csv", na.strings=c("", " ", "NA"))
-
-#Just ensuring that R realizes these variables are categorical and not continuous...
-blacktip_raw$Mortality <- factor(blacktip_raw$Mortality)
-blacktip_raw$Condition <- factor(blacktip_raw$Condition)
-blacktip_raw$Sex <- factor(blacktip_raw$Sex)
-blacktip_raw$Hook.Location <- factor(blacktip_raw$Hook.Location)
 ```
 
 ```{r}
-#Cleaning dataset: Removing 2 rows (1 shark without i-STAT blood data and 1 shark with no known mortality outcome because tags were removed before release)...
+#Cleaning dataset: Removing 2 rows (1 shark without i-STAT blood stress data and 1 shark with no known mortality outcome because tags were removed before release)...
 blacktip_cleaned <- blacktip_raw[-c(5,6), ]
+#Just ensuring that R realizes these variables are categorical and not continuous...
 blacktip_cleaned$Mortality <- factor(blacktip_cleaned$Mortality)
+blacktip_cleaned$Condition <- factor(blacktip_cleaned$Condition)
 
-#Selecting which variables I want to include in PCA...
+#Selecting which variables I want to include in PCA (PCA does not accept categorical variables)...
 columns_for_pca <- c("Fight.Time..min.", "pH", "Lactate..mmol.L.", "Handling.Time..min.", "Fork.Length..cm.", "Water.Temp...C.")
 pca_dataframe <- data.frame(blacktip_cleaned[ , columns_for_pca])
 pca_dataframe_naomitted <- na.omit(pca_dataframe)
