@@ -16,22 +16,28 @@ editor_options:
 ```
 
 ```{r}
+#Loading necessary libraries.
 library(car)
 library(dplyr)
 library(ggplot2)
 library(ggfortify)
 library(vegan)
 
-#Reading in dataset.
+#Reading in the dataset (which can be found in the "Data" folder in the GitHub repo).
 blacktip_raw <- read.csv(file="Blacktip_Datasheet_Quant.csv", na.strings=c("", " ", "NA"))
 ```
 
 ```{r}
-#Cleaning dataset: Removing 2 rows (1 shark without i-STAT blood stress data and 1 shark with no known mortality outcome because tags were removed before release)...
+#Cleaning dataset: Removing 2 rows (1 shark without i-STAT blood stress data and 1 shark with no known mortality outcome because tags were removed before release).
 blacktip_cleaned <- blacktip_raw[-c(5,6), ]
-#Just ensuring that R realizes these variables are categorical and not continuous...
+
+#Just ensuring that R realizes these 2 variables are categorical and not continuous.
 blacktip_cleaned$Mortality <- factor(blacktip_cleaned$Mortality)
 blacktip_cleaned$Condition <- factor(blacktip_cleaned$Condition)
+```
+
+```{r}
+#Now performing a PCA, to determine which variables are explaining the majority of the variation in the dataset. I have a lot of potential explanatory variables, and I believe weeding down the potential variables via a PCA is more informative than throwing all of the variables into a logistic regression model.
 
 #Selecting which variables I want to include in PCA (PCA does not accept categorical variables)...
 columns_for_pca <- c("Fight.Time..min.", "pH", "Lactate..mmol.L.", "Handling.Time..min.", "Fork.Length..cm.", "Water.Temp...C.")
@@ -41,16 +47,10 @@ pca_dataframe_naomitted <- na.omit(pca_dataframe)
 #Conducting PCA in ggplot, and scaling all continuous variables. 
 autoplot(prcomp(scale(pca_dataframe_naomitted)), shape=FALSE, label.size=3, loadings=TRUE, loadings.label=TRUE, loadings.label.size=3, loadings.colour='black', loadings.label.colour='black', data=blacktip_cleaned, colour='Mortality')
 
-#This PCA is telling me to choose either 'pH' or 'Lactate', and either 'Handling Time' or 'Fork Length' for regression purposes. This makes sense because 'pH' and 'Lactate' are negatively correlated (as they should be) and 'Handling Time' and 'Fork Length' (and really 'Fight Time') are positively correlated, which makes sense (i.e. larger sharks are both on the line and handled for longer period of time). So based on the results of this PCA, I can get rid of 2 of 6 variables for the regression, and I am choosing to get rid of 'Lactate' and 'Fork Length'...
+#Again, the point of this PCA was to determine which variables are most important and thus should be included in the logistic regression models. This PCA is telling me to choose either 'pH' or 'Lactate', and either 'Handling Time' or 'Fork Length' for regression purposes. This makes sense because 'pH' and 'Lactate' are negatively correlated (as they should be) and 'Handling Time' and 'Fork Length' (and really 'Fight Time') are positively correlated, which makes sense (i.e. larger sharks are both on the line and handled for longer periods of time). So based on the results of this PCA, I can get rid of 2 of 6 variables for the regression, and I am choosing to get rid of 'Lactate' and 'Fork Length'...
 ```
 
 ```{r}
-#Predicting mortality for all sharks combined (i.e. combining sharks caught from shore and sharks caught from charter boats), with 3 mortalities and 29 survivors.
-
-#Model 1: Mortality ~ Environment
-#Model 2: Mortality ~ Environment + Fishing Method
-#Model 3: Mortality ~ Environment * Fishing Method (looking at interaction)
-
 #Simply visualizing relationships between potential explanatory variables.
 pairs(Mortality ~ Fight.Time..min. + Handling.Time..min. + Hook.Location + Fork.Length..cm. + Condition + pH + Lactate..mmol.L. + Water.Temp...C., data=blacktip_raw, na.action=na.omit, panel=panel.smooth)
 
@@ -58,8 +58,21 @@ pairs(Mortality ~ Fight.Time..min. + Handling.Time..min. + Hook.Location + Fork.
 ```
 
 ```{r}
+#Now that I have identified which variables are most important, I am moving on to the binomial logistic regression, in an attempt to predict for mortality. I am predicting mortality for all sharks combined (i.e. combining sharks caught from shore and sharks caught from charter boats), with 3 mortalities and 29 survivors. 
+
+#General layout of the intended final models... where "Environment" includes variables such as "Water Temp", "Fight Time", "Handling Time", etc...
+#Model 1: Mortality ~ Environment
+#Model 2: Mortality ~ Environment + Fishing Method
+#Model 3: Mortality ~ Environment * Fishing Method (looking at interaction)
+```
+
+```{r}
+#MODEL 1
+
 #Starting with the full possible model, using the variables selected for above, via PCA. However, I am also including the variable 'Condition' here, which is categorical and thus could not be included in the PCA.
-mod.1 <- glm(Mortality ~ Fight.Time..min. + Handling.Time..min. + Condition + pH + Water.Temp...C., family="binomial", data=blacktip_cleaned) #"Logit" is the default model when family is "binomial".
+
+mod.1 <- glm(Mortality ~ Fight.Time..min. + Handling.Time..min. + Condition + pH + Water.Temp...C., family="binomial", data=blacktip_cleaned) 
+#"Logit" is the default model when family is "binomial".
 
 summary(mod.1)
 Anova(mod.1, type=3) #AIC=28.634
@@ -89,9 +102,12 @@ Anova(mod.1.4, type=3) #AIC=20.360 and p=0.05948
 ```
 
 ```{r}
+#MODEL 2
+
 #Moving on to Model 2, which involves taking 'Fishing Method' into account (i.e. determining if shore-based vs. charter-based affects mortality).
 
 #Taking same backwards stepwise approach as above (i.e. starting with full possible model and removing the least significant variable at each step)... Again, only real difference between this model and the model above is that I am now taking 'Fishing Method' into account.
+
 mod.2 <- glm(Mortality ~ Fight.Time..min. + Handling.Time..min. + Condition + pH + Water.Temp...C. + Fishing.Method, family="binomial", data=blacktip_cleaned) 
 
 summary(mod.2)
@@ -126,6 +142,8 @@ Anova(mod.2.5, type=3) #AIC=20.360 and p=0.05948
 ```
 
 ```{r}
+#MODEL 3
+
 #Now moving on to Model 3 and taking into account the potential interaction between 'Fishing Method' and 'pH'.
 
 mod.3 <- glm(Mortality ~ pH * Fishing.Method, family="binomial", data=blacktip_cleaned) 
