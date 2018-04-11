@@ -22,7 +22,7 @@ library(ggfortify)
 library(vegan)
 
 #Reading in the dataset (which can be found in the "Data" folder in the GitHub repo).
-blacktip_raw <- read.csv(file="Blacktip_Datasheet_Quant.csv", na.strings=c("", " ", "NA"))
+blacktip_raw <- read.csv("./Data/Blacktip_Datasheet_Quant.csv", na.strings=c("", " ", "NA"))
 ```
 
 ```{r}
