@@ -10,7 +10,7 @@ editor_options:
 ---
 
 ```{r}
-#Be sure to read the "Project_README.md" file in the "Project_Weber" GitHub repo before completing the below analysis.
+#Be sure to read the "Project_README.md" file in the "BinomialLogisticRegression_Weber" GitHub repo before completing the below analysis.
 ```
 
 ```{r}
