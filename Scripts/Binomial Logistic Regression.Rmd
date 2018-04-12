@@ -38,7 +38,7 @@ blacktip_cleaned$Condition <- factor(blacktip_cleaned$Condition)
 #Now performing a PCA, to determine which variables are explaining the majority of the variation in the dataset. I have a lot of potential explanatory variables, and I believe weeding down the potential variables via a PCA is more informative than throwing all of the variables into a logistic regression model.
 
 #Selecting which variables I want to include in PCA (PCA does not accept categorical variables).
-columns_for_pca <- c("Fight.Time..min.", "pH", "Lactate..mmol.L.", "Handling.Time..min.", "Fork.Length..cm.", "Water.Temp...C.")
+columns_for_pca <- c("Fight.Time..min.", "pH", "Lactate..mmol.L.", "Handling.Time..min.", "Fork.Length..cm.", "Water.Temp")
 pca_dataframe <- data.frame(blacktip_cleaned[ , columns_for_pca])
 pca_dataframe_naomitted <- na.omit(pca_dataframe)
 
@@ -50,7 +50,7 @@ autoplot(prcomp(scale(pca_dataframe_naomitted)), shape=FALSE, label.size=3, load
 
 ```{r}
 #Simply visualizing relationships between potential explanatory variables.
-pairs(Mortality ~ Fight.Time..min. + Handling.Time..min. + Hook.Location + Fork.Length..cm. + Condition + pH + Lactate..mmol.L. + Water.Temp...C., data=blacktip_raw, na.action=na.omit, panel=panel.smooth)
+pairs(Mortality ~ Fight.Time..min. + Handling.Time..min. + Hook.Location + Fork.Length..cm. + Condition + pH + Lactate..mmol.L. + Water.Temp, data=blacktip_raw, na.action=na.omit, panel=panel.smooth)
 
 #From this plot, we can see that 'pH' and 'Lactate' are negatively correlated, and 'Fork Length' is relatively positively correlated with both 'Fight Time' and 'Handling Time' (consistent with the results of the PCA above). 
 ```
@@ -69,13 +69,13 @@ pairs(Mortality ~ Fight.Time..min. + Handling.Time..min. + Hook.Location + Fork.
 
 #Starting with the full possible model, using the variables selected for above, via PCA. However, I am also including the variable 'Condition' here, which is categorical and thus could not be included in the PCA.
 
-mod.1 <- glm(Mortality ~ Fight.Time..min. + Handling.Time..min. + Condition + pH + Water.Temp...C., family="binomial", data=blacktip_cleaned) #"Logit" is the default model when family is "binomial".
+mod.1 <- glm(Mortality ~ Fight.Time..min. + Handling.Time..min. + Condition + pH + Water.Temp, family="binomial", data=blacktip_cleaned) #"Logit" is the default model when family is "binomial".
 summary(mod.1)
 Anova(mod.1, type=3) #AIC=28.634
 
 #Now taking a backwards stepwise approach to get the best fitting model (i.e. removing the least significant variable at each step)...
 
-mod.1.1 <- glm(Mortality ~ Handling.Time..min. + Condition + pH + Water.Temp...C., family="binomial", data=blacktip_cleaned)
+mod.1.1 <- glm(Mortality ~ Handling.Time..min. + Condition + pH + Water.Temp, family="binomial", data=blacktip_cleaned)
 summary(mod.1.1)
 Anova(mod.1.1, type=3) #AIC=26.900
 
@@ -101,7 +101,7 @@ Anova(mod.1.4, type=3) #AIC=20.360 and p=0.05948
 
 #Taking same backwards stepwise approach as above (i.e. starting with full possible model and removing the least significant variable at each step). Again, only real difference between this model and the model above is that I am now taking 'Fishing Method' into account.
 
-mod.2 <- glm(Mortality ~ Fight.Time..min. + Handling.Time..min. + Condition + pH + Water.Temp...C. + Fishing.Method, family="binomial", data=blacktip_cleaned) 
+mod.2 <- glm(Mortality ~ Fight.Time..min. + Handling.Time..min. + Condition + pH + Water.Temp + Fishing.Method, family="binomial", data=blacktip_cleaned) 
 summary(mod.2)
 Anova(mod.2, type=3) #AIC=18.000
 
