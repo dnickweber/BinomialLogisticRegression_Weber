@@ -20,6 +20,7 @@ library(dplyr)
 library(ggplot2)
 library(ggfortify)
 library(vegan)
+library(rcompanion)
 
 #Reading in the dataset (which can be found in the "Data" folder in the GitHub repo).
 blacktip_raw <- read.csv("./Data/Blacktip_Datasheet_Quant.csv", na.strings=c("", " ", "NA"))
@@ -50,7 +51,7 @@ autoplot(prcomp(scale(pca_dataframe_naomitted)), shape=FALSE, label.size=3, load
 
 ```{r}
 #Simply visualizing relationships between potential explanatory variables.
-pairs(Mortality ~ Fight.Time..min. + Handling.Time..min. + Hook.Location + Fork.Length..cm. + Condition + pH + Lactate..mmol.L. + Water.Temp, data=blacktip_raw, na.action=na.omit, panel=panel.smooth)
+pairs(Mortality ~ Fight.Time..min. + Handling.Time..min. + Hook.Location + Fork.Length..cm. + Condition + pH + Lactate..mmol.L. + Water.Temp, data=blacktip_cleaned, na.action=na.omit, panel=panel.smooth)
 
 #From this plot, we can see that 'pH' and 'Lactate' are negatively correlated, and 'Fork Length' is relatively positively correlated with both 'Fight Time' and 'Handling Time' (consistent with the results of the PCA above). 
 ```
@@ -71,25 +72,27 @@ pairs(Mortality ~ Fight.Time..min. + Handling.Time..min. + Hook.Location + Fork.
 
 mod.1 <- glm(Mortality ~ Fight.Time..min. + Handling.Time..min. + Condition + pH + Water.Temp, family="binomial", data=blacktip_cleaned) #"Logit" is the default model when family is "binomial".
 summary(mod.1)
-Anova(mod.1, type=3) #AIC=28.634
+Anova(mod.1, type=2) #AIC=28.634
+nagelkerke(mod.1)
 
 #Now taking a backwards stepwise approach to get the best fitting model (i.e. removing the least significant variable at each step)...
 
 mod.1.1 <- glm(Mortality ~ Handling.Time..min. + Condition + pH + Water.Temp, family="binomial", data=blacktip_cleaned)
 summary(mod.1.1)
-Anova(mod.1.1, type=3) #AIC=26.900
+Anova(mod.1.1, type=2) #AIC=26.900
 
 mod.1.2 <- glm(Mortality ~ Handling.Time..min. + Condition + pH, family="binomial", data=blacktip_cleaned)
 summary(mod.1.2)
-Anova(mod.1.2, type=3) #AIC=25.491
+Anova(mod.1.2, type=2) #AIC=25.491
 
 mod.1.3 <- glm(Mortality ~ Handling.Time..min. + pH, family="binomial", data=blacktip_cleaned)
 summary(mod.1.3)
-Anova(mod.1.3, type=3) #AIC=22.323
+Anova(mod.1.3, type=2) #AIC=22.323
 
 mod.1.4 <- glm(Mortality ~ pH, family="binomial", data=blacktip_cleaned)
 summary(mod.1.4)
-Anova(mod.1.4, type=3) #AIC=20.360 and p=0.05948
+Anova(mod.1.4, type=2) #AIC=20.360 and p=0.05948
+nagelkerke(mod.1.4)
 
 #The above model (mod.1.4), with only pH as an explanatory variable, is the best fitting model based on AIC scores.
 ```
@@ -142,4 +145,18 @@ Anova(mod.3, type=3) #AIC=23.456
 
 ```{r}
 #In summary, based on the backwards stepwise approach taken for the binomial logistic regression models, the variable 'pH' is the best predictor for whether or not a shark will survive post-release. To bring the analysis full circle, this result is not surprising when looking back at the PCA that was run initially - 2 of the 3 known mortalities fall almost exactly onto the axis of variation explained by 'pH'. 
+```
+
+```{r}
+#Plotting the best fitting logistic regression model (mod.1.4)...
+
+blacktip_cleaned$Mortality.Num <- as.numeric(blacktip_cleaned$Mortality) - 1
+
+plot(blacktip_cleaned$pH, blacktip_cleaned$Mortality.Num, xlab="pH", ylab="Probability of Mortality", pch=19, xlim=rev(range(blacktip_cleaned$pH)), cex=1.2)
+
+curve(predict(mod.1.4, data.frame(pH=x), type="response", lty=1), add=TRUE, lwd=1.4, col="red")
+#Draws a curve based on prediction from logistic regression model.
+
+points(blacktip_cleaned$pH, fitted(mod.1.4), pch=1, cex=1.2, col="red") 
+#Draws a set of points of pH survival based on 'fit' to glm model.
 ```
