@@ -159,4 +159,6 @@ curve(predict(mod.1.4, data.frame(pH=x), type="response", lty=1), add=TRUE, lwd=
 
 points(blacktip_cleaned$pH, fitted(mod.1.4), pch=1, cex=1.2, col="red") 
 #Draws a set of points of pH survival based on 'fit' to glm model.
+
+abline(v=7.291, lty=2)
 ```
