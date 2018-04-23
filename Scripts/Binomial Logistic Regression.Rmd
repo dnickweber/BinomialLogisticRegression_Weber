@@ -44,7 +44,7 @@ pca_dataframe <- data.frame(blacktip_cleaned[ , columns_for_pca])
 pca_dataframe_naomitted <- na.omit(pca_dataframe)
 
 #Conducting PCA in ggplot, and scaling all continuous variables. 
-autoplot(prcomp(scale(pca_dataframe_naomitted)), shape=FALSE, label.size=3, loadings=TRUE, loadings.label=TRUE, loadings.label.size=3, loadings.colour='black', loadings.label.colour='black', data=blacktip_cleaned, colour='Mortality')
+autoplot(prcomp(scale(pca_dataframe_naomitted)), shape=FALSE, label.size=4, loadings=TRUE, loadings.label=TRUE, loadings.label.size=4, loadings.colour='black', loadings.label.colour='black', data=blacktip_cleaned, colour='Mortality') + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 #Again, the point of this PCA was to determine which variables should be included in the logistic regression models. This PCA demonstrates that 'pH' and 'Lactate' are negatively correlated (as expected) and thus competing for the same variation. Thus, it is appropriate to remove one of the two, and I am choosing to remove 'Lactate' in the later analyses. Additionally, 'Handling Time' and 'Fork Length' are positively correlated (which makes sense, larger sharks are handled for longer period of time), and thus also competing for the same variation. For that reason, I am choosing to remove 'Fork Length' in the later analyses. In sum, the results of this PCA suggest to get rid of 2 of 6 variables for the logistic regression, and I am choosing to get rid of 'Lactate' and 'Fork Length'.
 ```
@@ -161,4 +161,5 @@ points(blacktip_cleaned$pH, fitted(mod.1.4), pch=1, cex=1.2, col="red")
 #Draws a set of points of pH survival based on 'fit' to glm model.
 
 abline(v=7.291, lty=2)
+#Adding vertical line at 0.25 probability of mortality.
 ```
