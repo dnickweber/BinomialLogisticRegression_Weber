@@ -51,7 +51,7 @@ summary(initial_pca)
 #Plotting PCA
 autoplot(prcomp(pca_dataframe_naomitted, scale=TRUE), shape=FALSE, label.size=4, loadings=TRUE, loadings.label=TRUE, loadings.label.size=4, loadings.colour='black', loadings.label.colour='black', data=blacktip_cleaned, colour='Mortality') + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
-#Again, the point of this PCA was to determine which variables should be included in the logistic regression models. This PCA demonstrates that 'pH' and 'Lactate' are negatively correlated (as expected) and thus competing for the same variation. Thus, it is appropriate to remove one of the two, and I am choosing to remove 'Lactate' in the later analyses. Additionally, 'Handling Time' and 'Fork Length' are positively correlated (which makes sense, larger sharks are handled for longer period of time), and thus also competing for the same variation. For that reason, I am choosing to remove 'Fork Length' in the later analyses. In sum, the results of this PCA suggest to get rid of 2 of 6 variables for the logistic regression, and I am choosing to get rid of 'Lactate' and 'Fork Length'.
+#Again, the point of this PCA was to determine which variables should be included in the logistic regression models. This PCA plot shows that 'pH' and 'Lactate' are negatively correlated (as expected) and thus competing for the same variation. Thus, it is appropriate to remove one of the two, and I am choosing to remove 'Lactate' in the later GLM models. Additionally, 'Handling Time' and 'Fork Length' are positively correlated (which makes sense, larger sharks are handled for longer period of time), and thus also competing for the same variation. For that reason, I am choosing to remove 'Fork Length' in the later analyses. In sum, the results of this PCA suggest to get rid of 2 of 6 variables for the logistic regression, and I am choosing to get rid of 'Lactate' and 'Fork Length'.
 ```
 
 ```{r}
@@ -59,15 +59,8 @@ autoplot(prcomp(pca_dataframe_naomitted, scale=TRUE), shape=FALSE, label.size=4,
 pairs(Mortality ~ Fight.Time..min. + Handling.Time..min. + Hook.Location + Fork.Length..cm. + Condition + pH + Lactate..mmol.L. + Water.Temp, data=blacktip_cleaned, na.action=na.omit, panel=panel.smooth)
 
 #From this plot, we can see that 'pH' and 'Lactate' are negatively correlated, and 'Fork Length' is relatively positively correlated with both 'Fight Time' and 'Handling Time' (consistent with the results of the PCA above). 
-```
 
-```{r}
 #Now that I have analyzed and accounted for relationships between explanatory variables, I am moving on to the binomial logistic regression, in an attempt to predict for mortality. I am predicting mortality for all sharks combined (i.e. combining sharks caught from shore and sharks caught from charter boats) - with 3 mortalities and 29 survivors. 
-
-#General layout of the intended final models... where "Environment" includes variables such as "Water Temp", "Fight Time", "Handling Time", etc...
-#Model 1: Mortality ~ Environment
-#Model 2: Mortality ~ Environment + Fishing Method
-#Model 3: Mortality ~ Environment * Fishing Method (looking at interaction)
 ```
 
 ```{r}
@@ -78,6 +71,7 @@ pairs(Mortality ~ Fight.Time..min. + Handling.Time..min. + Hook.Location + Fork.
 mod.1 <- glm(Mortality ~ Fight.Time..min. + Handling.Time..min. + Condition + pH + Water.Temp, family="binomial", data=blacktip_cleaned) #"Logit" is the default model when family is "binomial".
 summary(mod.1)
 Anova(mod.1, type=2) #AIC=28.634
+#I am using type II Anovas because there are no significant interactions between explanatory variables (determined below).
 nagelkerke(mod.1)
 
 #Now taking a backwards stepwise approach to get the best fitting model (i.e. removing the least significant variable at each step)...
@@ -139,13 +133,13 @@ Anova(mod.2.5, type=3) #AIC=20.360 and p=0.05948
 ```{r}
 ##MODEL 3
 
-#Now moving on to Model 3 and taking into account the potential interaction between 'Fishing Method' and 'pH'.
+#Now taking into account the potential interaction between 'Fishing Method' and 'pH'.
 
 mod.3 <- glm(Mortality ~ pH * Fishing.Method, family="binomial", data=blacktip_cleaned) 
 summary(mod.3)
 Anova(mod.3, type=3) #AIC=23.456
 
-#There is no significant interaction between 'Fishing Method' and 'pH'. 
+#There is no significant interaction between 'Fishing Method' and 'pH' (p=0.3415). 
 ```
 
 ```{r}
@@ -157,7 +151,7 @@ Anova(mod.3, type=3) #AIC=23.456
 
 blacktip_cleaned$Mortality.Num <- as.numeric(blacktip_cleaned$Mortality) - 1
 
-plot(blacktip_cleaned$pH, blacktip_cleaned$Mortality.Num, xlab="pH", ylab="Probability of Mortality", pch=19, xlim=rev(range(blacktip_cleaned$pH)), cex=1.2)
+plot(blacktip_cleaned$pH, blacktip_cleaned$Mortality.Num, xlab="pH", ylab="Probability of Mortality", pch=19, cex=1.2)
 
 curve(predict(mod.1.4, data.frame(pH=x), type="response", lty=1), add=TRUE, lwd=1.4, col="red")
 #Draws a curve based on prediction from logistic regression model.
